@@ -6,7 +6,7 @@
   "scripts": {
     "start:server": "node ./src/server/index.js",
     "start:client": "sleep 1 && yarn scaffold && parcel serve -p 3000 public/index.html",
-    "scaffold": "node ../../generator/mst-gql-scaffold.js --roots Todo --outDir src/app/models/ --format ts http://localhost:3001/graphql",
+    "scaffold": "node ../../generator/mst-gql-scaffold.js --outDir src/app/models/ --format ts http://localhost:3001/graphql",
     "postinstall": "../../node_modules/.bin/relative-deps",
     "start": "run-p start:server start:client",
     "type-check": "tsc --noEmit",
@@ -22,23 +22,27 @@
     "express": "^4.17.1",
     "graphql": "^14.6.0",
     "graphql-playground-middleware-express": "^1.7.12",
+    "graphql-request": "^3.4.0",
     "graphql-tag": "^2.10.1",
     "isomorphic-fetch": "^2.2.1",
     "jest": "^24.8.0",
-    "mobx": "^5.13.0",
-    "mobx-react": "^6.1.1",
-    "mobx-state-tree": "^3.14.1",
-    "mst-gql": "latest",
-    "react": "^16.8.6",
-    "react-dom": "^16.8.6"
+    "mobx": "^6.1.8",
+    "mobx-react": "^7.1.0",
+    "mobx-state-tree": "^5.0.1",
+    "mst-gql": "^0.13.0",
+    "react": "^17.0.1",
+    "react-dom": "^17.0.1"
   },
   "devDependencies": {
     "@babel/core": "^7.6.4",
     "npm-run-all": "^4.1.5",
-    "parcel": "^1.12.4",
+    "parcel": "1.12.3",
     "typescript": "^3.4.5"
   },
   "relativeDependencies": {
     "mst-gql": "../../"
+  },
+  "resolutions": {
+    "graphql": "14.7.0"
   }
 }

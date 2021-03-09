@@ -5,8 +5,14 @@ import { ObservableMap } from "mobx"
 import { types } from "mobx-state-tree"
 import { MSTGQLStore, configureStoreMixin, QueryOptions, withTypedRefs } from "mst-gql"
 
-import { TodoModel, TodoModelType } from "./TodoModel"
-import { todoModelPrimitives, TodoModelSelector } from "./TodoModel.base"
+import { BasicTodoModel, BasicTodoModelType } from "./BasicTodoModel"
+import { basicTodoModelPrimitives, BasicTodoModelSelector } from "./BasicTodoModel.base"
+import { FancyTodoModel, FancyTodoModelType } from "./FancyTodoModel"
+import { fancyTodoModelPrimitives, FancyTodoModelSelector } from "./FancyTodoModel.base"
+import { TodoListModel, TodoListModelType } from "./TodoListModel"
+import { todoListModelPrimitives, TodoListModelSelector } from "./TodoListModel.base"
+
+import { todoModelPrimitives, TodoModelSelector , TodoUnion } from "./"
 
 
 export type CreateTodoInput = {
@@ -16,7 +22,9 @@ export type CreateTodoInput = {
 }
 /* The TypeScript type that explicits the refs to other models in order to prevent a circular refs issue */
 type Refs = {
-  todos: ObservableMap<string, TodoModelType>
+  basicTodos: ObservableMap<string, BasicTodoModelType>,
+  fancyTodos: ObservableMap<string, FancyTodoModelType>,
+  todoLists: ObservableMap<string, TodoListModelType>
 }
 
 
@@ -25,6 +33,7 @@ type Refs = {
 */
 export enum RootStoreBaseQueries {
 queryTodos="queryTodos",
+queryTodoList="queryTodoList",
 queryStringFromServer="queryStringFromServer"
 }
 export enum RootStoreBaseMutations {
@@ -38,26 +47,33 @@ mutateReturnBoolean="mutateReturnBoolean"
 */
 export const RootStoreBase = withTypedRefs<Refs>()(MSTGQLStore
   .named("RootStore")
-  .extend(configureStoreMixin([['Todo', () => TodoModel]], ['Todo'], "js"))
+  .extend(configureStoreMixin([['BasicTodo', () => BasicTodoModel], ['FancyTodo', () => FancyTodoModel], ['TodoList', () => TodoListModel]], ['BasicTodo', 'FancyTodo', 'TodoList'], "js"))
   .props({
-    todos: types.optional(types.map(types.late((): any => TodoModel)), {})
+    basicTodos: types.optional(types.map(types.late((): any => BasicTodoModel)), {}),
+    fancyTodos: types.optional(types.map(types.late((): any => FancyTodoModel)), {}),
+    todoLists: types.optional(types.map(types.late((): any => TodoListModel)), {})
   })
   .actions(self => ({
     queryTodos(variables?: {  }, resultSelector: string | ((qb: TodoModelSelector) => TodoModelSelector) = todoModelPrimitives.toString(), options: QueryOptions = {}) {
-      return self.query<{ todos: TodoModelType[]}>(`query todos { todos {
+      return self.query<{ todos: TodoUnion[]}>(`query todos { todos {
         ${typeof resultSelector === "function" ? resultSelector(new TodoModelSelector()).toString() : resultSelector}
+      } }`, variables, options)
+    },
+    queryTodoList(variables?: {  }, resultSelector: string | ((qb: TodoListModelSelector) => TodoListModelSelector) = todoListModelPrimitives.toString(), options: QueryOptions = {}) {
+      return self.query<{ todoList: TodoListModelType}>(`query todoList { todoList {
+        ${typeof resultSelector === "function" ? resultSelector(new TodoListModelSelector()).toString() : resultSelector}
       } }`, variables, options)
     },
     queryStringFromServer(variables: { string?: string }, options: QueryOptions = {}) {
       return self.query<{ stringFromServer: string }>(`query stringFromServer($string: String) { stringFromServer(string: $string) }`, variables, options)
     },
     mutateToggleTodo(variables: { id: string }, resultSelector: string | ((qb: TodoModelSelector) => TodoModelSelector) = todoModelPrimitives.toString(), optimisticUpdate?: () => void) {
-      return self.mutate<{ toggleTodo: TodoModelType}>(`mutation toggleTodo($id: ID!) { toggleTodo(id: $id) {
+      return self.mutate<{ toggleTodo: TodoUnion}>(`mutation toggleTodo($id: ID!) { toggleTodo(id: $id) {
         ${typeof resultSelector === "function" ? resultSelector(new TodoModelSelector()).toString() : resultSelector}
       } }`, variables, optimisticUpdate)
     },
     mutateCreateTodo(variables: { todo: CreateTodoInput }, resultSelector: string | ((qb: TodoModelSelector) => TodoModelSelector) = todoModelPrimitives.toString(), optimisticUpdate?: () => void) {
-      return self.mutate<{ createTodo: TodoModelType}>(`mutation createTodo($todo: CreateTodoInput!) { createTodo(todo: $todo) {
+      return self.mutate<{ createTodo: TodoUnion}>(`mutation createTodo($todo: CreateTodoInput!) { createTodo(todo: $todo) {
         ${typeof resultSelector === "function" ? resultSelector(new TodoModelSelector()).toString() : resultSelector}
       } }`, variables, optimisticUpdate)
     },

@@ -87,5 +87,8 @@
   "peerDependencies": {
     "mobx": "^4.0.0 || ^5.0.0",
     "mobx-state-tree": "^3.0.0"
+  },
+  "resolutions": {
+    "graphql": "14.7.0"
   }
 }

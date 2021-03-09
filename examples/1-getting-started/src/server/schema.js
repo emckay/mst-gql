@@ -16,13 +16,21 @@ const store = {
       id: 2,
       text: "Install mst-gql",
       complete: false
+    },
+    {
+      id: 3,
+      label: "Install mst-gql",
+      color: "salmon",
+      complete: false
     }
   ]
 }
 
 const typeDefs = `
+  union Todo = BasicTodo | FancyTodo
   type Query {
     todos: [Todo]
+    todoList: TodoList!
     stringFromServer(string: String): String
   }
   type Mutation {
@@ -30,10 +38,20 @@ const typeDefs = `
     createTodo(todo: CreateTodoInput!): Todo
     returnBoolean(toReturn: Boolean!): Boolean
   }
-  type Todo {
+  type BasicTodo {
     id: ID,
     text: String,
     complete: Boolean,
+  }
+  type FancyTodo {
+    id: ID,
+    label: String,
+    color: String,
+    complete: Boolean
+  }
+  type TodoList {
+    id: ID!
+    todos: [Todo!]!
   }
 
   input CreateTodoInput {
@@ -50,6 +68,13 @@ const resolvers = {
     },
     stringFromServer: (root, { string }, context) => {
       return string || "No String Sent."
+    },
+    todoList: () => ({ id: 0, todos: store.todos })
+  },
+  Todo: {
+    __resolveType(obj) {
+      if (obj.label) return "FancyTodo"
+      return "BasicTodo"
     }
   },
   Mutation: {

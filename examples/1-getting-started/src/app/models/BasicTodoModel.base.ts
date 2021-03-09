@@ -9,13 +9,13 @@ import { RootStoreType } from "./index"
 
 
 /**
- * TodoBase
- * auto generated base class for the model TodoModel.
+ * BasicTodoBase
+ * auto generated base class for the model BasicTodoModel.
  */
-export const TodoModelBase = ModelBase
-  .named('Todo')
+export const BasicTodoModelBase = ModelBase
+  .named('BasicTodo')
   .props({
-    __typename: types.optional(types.literal("Todo"), "Todo"),
+    __typename: types.optional(types.literal("BasicTodo"), "BasicTodo"),
     id: types.identifier,
     text: types.union(types.undefined, types.null, types.string),
     complete: types.union(types.undefined, types.null, types.boolean),
@@ -26,13 +26,13 @@ export const TodoModelBase = ModelBase
     }
   }))
 
-export class TodoModelSelector extends QueryBuilder {
+export class BasicTodoModelSelector extends QueryBuilder {
   get id() { return this.__attr(`id`) }
   get text() { return this.__attr(`text`) }
   get complete() { return this.__attr(`complete`) }
 }
-export function selectFromTodo() {
-  return new TodoModelSelector()
+export function selectFromBasicTodo() {
+  return new BasicTodoModelSelector()
 }
 
-export const todoModelPrimitives = selectFromTodo().text.complete
+export const basicTodoModelPrimitives = selectFromBasicTodo().text.complete
