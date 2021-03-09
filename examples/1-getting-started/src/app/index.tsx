@@ -8,6 +8,7 @@ import { RootStore } from "./models/RootStore"
 import { StoreContext } from "./models/reactUtils"
 import { Home } from "./Home"
 import { ServerString } from "./components"
+import { applySnapshot, getSnapshot } from "mobx-state-tree"
 
 const rootStore = RootStore.create(undefined, {
   gqlHttpClient: createHttpClient("http://localhost:3001/graphql")

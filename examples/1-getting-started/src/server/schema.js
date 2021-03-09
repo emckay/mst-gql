@@ -42,16 +42,22 @@ const typeDefs = `
     id: ID,
     text: String,
     complete: Boolean,
+    todoLists: [TodoList!]!
   }
   type FancyTodo {
     id: ID,
     label: String,
     color: String,
     complete: Boolean
+    todoLists: [TodoList!]!
+  }
+  type User {
+    todoLists: [TodoList!]!
   }
   type TodoList {
     id: ID!
     todos: [Todo!]!
+    user: User!
   }
 
   input CreateTodoInput {

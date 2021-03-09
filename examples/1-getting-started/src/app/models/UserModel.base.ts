@@ -17,16 +17,13 @@ type Refs = {
 }
 
 /**
- * BasicTodoBase
- * auto generated base class for the model BasicTodoModel.
+ * UserBase
+ * auto generated base class for the model UserModel.
  */
-export const BasicTodoModelBase = withTypedRefs<Refs>()(ModelBase
-  .named('BasicTodo')
+export const UserModelBase = withTypedRefs<Refs>()(ModelBase
+  .named('User')
   .props({
-    __typename: types.optional(types.literal("BasicTodo"), "BasicTodo"),
-    id: types.identifier,
-    text: types.union(types.undefined, types.null, types.string),
-    complete: types.union(types.undefined, types.null, types.boolean),
+    __typename: types.optional(types.literal("User"), "User"),
     todoLists: types.union(types.undefined, types.array(MSTGQLRef(types.late((): any => TodoListModel)))),
   })
   .views(self => ({
@@ -35,14 +32,11 @@ export const BasicTodoModelBase = withTypedRefs<Refs>()(ModelBase
     }
   })))
 
-export class BasicTodoModelSelector extends QueryBuilder {
-  get id() { return this.__attr(`id`) }
-  get text() { return this.__attr(`text`) }
-  get complete() { return this.__attr(`complete`) }
+export class UserModelSelector extends QueryBuilder {
   todoLists(builder?: string | TodoListModelSelector | ((selector: TodoListModelSelector) => TodoListModelSelector)) { return this.__child(`todoLists`, TodoListModelSelector, builder) }
 }
-export function selectFromBasicTodo() {
-  return new BasicTodoModelSelector()
+export function selectFromUser() {
+  return new UserModelSelector()
 }
 
-export const basicTodoModelPrimitives = selectFromBasicTodo().text.complete
+export const userModelPrimitives = selectFromUser()
