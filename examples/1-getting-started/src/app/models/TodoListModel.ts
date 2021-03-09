@@ -1,4 +1,7 @@
-import { Instance } from "mobx-state-tree"
+import { Instance, types } from "mobx-state-tree"
+import { MSTGQLRef } from "mst-gql"
+import { BasicTodoModel } from "."
+import { FancyTodoModel } from "./FancyTodoModel"
 import { TodoListModelBase } from "./TodoListModel.base"
 
 /* The TypeScript type of an instance of TodoListModel */
@@ -15,7 +18,18 @@ export {
 /**
  * TodoListModel
  */
-export const TodoListModel = TodoListModelBase.actions((self) => ({
+export const TodoListModel = TodoListModelBase.props({
+  // Workaround: https://github.com/mobxjs/mst-gql/pull/114
+  todos: types.union(
+    types.undefined,
+    types.array(
+      types.union(
+        MSTGQLRef(types.late((): any => FancyTodoModel)),
+        MSTGQLRef(types.late((): any => BasicTodoModel))
+      )
+    )
+  )
+}).actions((self) => ({
   // This is an auto-generated example action.
   log() {
     console.log(JSON.stringify(self))
