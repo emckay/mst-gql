@@ -3,7 +3,7 @@ import { observer } from "mobx-react-lite"
 import { useQuery } from "./models/reactUtils"
 
 import { Error, Loading, Todo } from "./components"
-import { todoModelPrimitives } from "./models"
+import { todoModelPrimitives, TodoUnion } from "./models"
 
 export const Home = observer(() => {
   const { loading, error, data, query } = useQuery((store) =>
@@ -11,13 +11,11 @@ export const Home = observer(() => {
   )
   if (error) return <Error>{error.message}</Error>
   if (data) {
-    console.log("data", data)
-
     return (
       <>
         <ul>
           {data.todoList?.todos?.map((todo) => (
-            <Todo key={todo!.id} todo={todo} />
+            <Todo key={todo!.id} todo={todo as TodoUnion} />
           ))}
         </ul>
         {loading ? (
