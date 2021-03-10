@@ -7,12 +7,10 @@ import { MSTGQLStore, configureStoreMixin, QueryOptions, withTypedRefs } from "m
 
 import { BasicTodoModel, BasicTodoModelType } from "./BasicTodoModel"
 import { basicTodoModelPrimitives, BasicTodoModelSelector } from "./BasicTodoModel.base"
-import { TodoListModel, TodoListModelType } from "./TodoListModel"
-import { todoListModelPrimitives, TodoListModelSelector } from "./TodoListModel.base"
-import { UserModel, UserModelType } from "./UserModel"
-import { userModelPrimitives, UserModelSelector } from "./UserModel.base"
 import { FancyTodoModel, FancyTodoModelType } from "./FancyTodoModel"
 import { fancyTodoModelPrimitives, FancyTodoModelSelector } from "./FancyTodoModel.base"
+import { TodoListModel, TodoListModelType } from "./TodoListModel"
+import { todoListModelPrimitives, TodoListModelSelector } from "./TodoListModel.base"
 
 import { todoModelPrimitives, TodoModelSelector , TodoUnion } from "./"
 
@@ -25,8 +23,8 @@ export type CreateTodoInput = {
 /* The TypeScript type that explicits the refs to other models in order to prevent a circular refs issue */
 type Refs = {
   basicTodos: ObservableMap<string, BasicTodoModelType>,
-  todoLists: ObservableMap<string, TodoListModelType>,
-  fancyTodos: ObservableMap<string, FancyTodoModelType>
+  fancyTodos: ObservableMap<string, FancyTodoModelType>,
+  todoLists: ObservableMap<string, TodoListModelType>
 }
 
 
@@ -49,11 +47,11 @@ mutateReturnBoolean="mutateReturnBoolean"
 */
 export const RootStoreBase = withTypedRefs<Refs>()(MSTGQLStore
   .named("RootStore")
-  .extend(configureStoreMixin([['BasicTodo', () => BasicTodoModel], ['TodoList', () => TodoListModel], ['User', () => UserModel], ['FancyTodo', () => FancyTodoModel]], ['BasicTodo', 'TodoList', 'FancyTodo'], "js"))
+  .extend(configureStoreMixin([['BasicTodo', () => BasicTodoModel], ['FancyTodo', () => FancyTodoModel], ['TodoList', () => TodoListModel]], ['BasicTodo', 'FancyTodo', 'TodoList'], "js"))
   .props({
     basicTodos: types.optional(types.map(types.late((): any => BasicTodoModel)), {}),
-    todoLists: types.optional(types.map(types.late((): any => TodoListModel)), {}),
-    fancyTodos: types.optional(types.map(types.late((): any => FancyTodoModel)), {})
+    fancyTodos: types.optional(types.map(types.late((): any => FancyTodoModel)), {}),
+    todoLists: types.optional(types.map(types.late((): any => TodoListModel)), {})
   })
   .actions(self => ({
     queryTodos(variables?: {  }, resultSelector: string | ((qb: TodoModelSelector) => TodoModelSelector) = todoModelPrimitives.toString(), options: QueryOptions = {}) {

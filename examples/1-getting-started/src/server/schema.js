@@ -3,6 +3,12 @@ const fetch = require("isomorphic-fetch")
 const store = {
   todos: [
     {
+      id: 3,
+      label: "Install mst-gql",
+      color: "salmon",
+      complete: false
+    },
+    {
       id: 0,
       text: "Go to the shops",
       complete: false
@@ -15,12 +21,6 @@ const store = {
     {
       id: 2,
       text: "Install mst-gql",
-      complete: false
-    },
-    {
-      id: 3,
-      label: "Install mst-gql",
-      color: "salmon",
       complete: false
     }
   ]
@@ -42,22 +42,16 @@ const typeDefs = `
     id: ID,
     text: String,
     complete: Boolean,
-    todoLists: [TodoList!]!
   }
   type FancyTodo {
     id: ID,
     label: String,
     color: String,
     complete: Boolean
-    todoLists: [TodoList!]!
-  }
-  type User {
-    todoLists: [TodoList!]!
   }
   type TodoList {
     id: ID!
     todos: [Todo!]!
-    user: User!
   }
 
   input CreateTodoInput {

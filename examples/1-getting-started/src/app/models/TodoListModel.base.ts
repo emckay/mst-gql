@@ -8,8 +8,6 @@ import { ModelBase } from "./ModelBase"
 import { BasicTodoModel } from "./BasicTodoModel"
 import { FancyTodoModel } from "./FancyTodoModel"
 import { TodoModelSelector } from "./TodoModelSelector"
-import { UserModel, UserModelType } from "./UserModel"
-import { UserModelSelector } from "./UserModel.base"
 import { RootStoreType } from "./index"
 
 
@@ -23,7 +21,6 @@ export const TodoListModelBase = ModelBase
     __typename: types.optional(types.literal("TodoList"), "TodoList"),
     id: types.identifier,
     todos: types.union(types.undefined, types.array(types.union(types.late(() => BasicTodoModel), types.late(() => FancyTodoModel)))),
-    user: types.union(types.undefined, types.late((): any => UserModel)),
   })
   .views(self => ({
     get store() {
@@ -34,7 +31,6 @@ export const TodoListModelBase = ModelBase
 export class TodoListModelSelector extends QueryBuilder {
   get id() { return this.__attr(`id`) }
   todos(builder?: string | TodoModelSelector | ((selector: TodoModelSelector) => TodoModelSelector)) { return this.__child(`todos`, TodoModelSelector, builder) }
-  user(builder?: string | UserModelSelector | ((selector: UserModelSelector) => UserModelSelector)) { return this.__child(`user`, UserModelSelector, builder) }
 }
 export function selectFromTodoList() {
   return new TodoListModelSelector()

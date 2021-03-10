@@ -23,3 +23,7 @@ Uncaught TypeError: Cannot read property 'actions' of undefined
     at localRequire (app.d221c077.js:53)
     at Object.parcelRequire.../src/app/models/TodoModelSelector.ts.mst-gql (TodoModelSelector.ts:9)
 ```
+
+# Error 3: Wrong type assigned from union after applying snapshot
+
+See `examples/1-getting-started/src/app/index.tsx`. After 2 seconds, the original root store is snapshooted, and the snapshot is applied to a blank root store (this is essentially what happens in SSR). The types from the union Todo are not assigned correctly and there is a run-time error because MST attempts to look up a `BasicTodo` in the `FancyTodo` store.
