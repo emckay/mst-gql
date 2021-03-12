@@ -1,5 +1,6 @@
 import { DocumentNode } from "graphql";
 import { IAnyModelType } from "mobx-state-tree";
+import { SubscriptionClient } from "subscriptions-transport-ws";
 import { Query, QueryOptions } from "./Query";
 export interface RequestHandler<T = any> {
     request(query: string, variables: any): Promise<T>;
@@ -10,6 +11,8 @@ export declare const MSTGQLStore: import("mobx-state-tree").IModelType<{
     ssr: boolean;
     __promises: Map<string, Promise<unknown>>;
     __afterInit: boolean;
+    gqlHttpClient: RequestHandler;
+    gqlWsClient: SubscriptionClient;
 } & {
     merge: (data: unknown) => any;
     deflate: (data: unknown) => any;
@@ -17,6 +20,8 @@ export declare const MSTGQLStore: import("mobx-state-tree").IModelType<{
     query: <T_1>(query: string | DocumentNode, variables?: any, options?: QueryOptions) => Query<T_1>;
     subscribe: <T_2 = any>(query: string | DocumentNode, variables?: any, onData?: ((item: T_2) => void) | undefined, onError?: (error: Error) => void) => () => void;
     rawRequest: (query: string, variables: any) => Promise<any>;
+    setHttpClient: (value: RequestHandler) => void;
+    setWsClient: (value: SubscriptionClient) => void;
     __pushPromise(promise: Promise<{}>, queryKey: string): void;
     __runInStoreContext<T_3>(fn: () => T_3): T_3;
     __cacheResponse(key: string, response: any): void;

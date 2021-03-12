@@ -1,6 +1,6 @@
 import { resolveIdentifier, types, getEnv, recordPatches, getParent, getType, applySnapshot, addDisposer, onSnapshot } from 'mobx-state-tree';
 import { print } from 'graphql';
-import { action, observable } from 'mobx';
+import { action, makeObservable, observable } from 'mobx';
 import { GraphQLClient } from 'graphql-request';
 
 const preserveCamelCase = string => {
@@ -605,20 +605,22 @@ function deflateHelper(store, data) {
   function deflate(data) {
     if (!data || typeof data !== "object") return data;
     if (Array.isArray(data)) return data.map(deflate);
-    var __typename = data.__typename,
-        id = data.id;
+    const {
+      __typename,
+      id
+    } = data;
 
     if (__typename && store.isRootType(__typename)) {
       // GQL object with root type, keep only __typename & id
       return {
-        __typename: __typename,
-        id: id
+        __typename,
+        id
       };
     } else {
       // GQL object with non-root type, return object with all props deflated
-      var snapshot = {};
+      const snapshot = {};
 
-      for (var key in data) {
+      for (const key in data) {
         snapshot[key] = deflate(data[key]);
       }
 
@@ -633,21 +635,23 @@ function mergeHelper(store, data) {
   function merge(data) {
     if (!data || typeof data !== "object") return data;
     if (Array.isArray(data)) return data.map(merge);
-    var __typename = data.__typename,
-        id = data.id; // convert values deeply first to MST objects as much as possible
+    const {
+      __typename,
+      id
+    } = data; // convert values deeply first to MST objects as much as possible
 
-    var snapshot = {};
+    const snapshot = {};
 
-    for (var key in data) {
+    for (const key in data) {
       snapshot[key] = merge(data[key]);
     } // GQL object
 
 
     if (__typename && store.isKnownType(__typename)) {
       // GQL object with known type, instantiate or recycle MST object
-      var typeDef = store.getTypeDef(__typename); // Try to reuse instance, even if it is not a root type
+      const typeDef = store.getTypeDef(__typename); // Try to reuse instance, even if it is not a root type
 
-      var instance = id !== undefined && resolveIdentifier(typeDef, store, id);
+      let instance = id !== undefined && resolveIdentifier(typeDef, store, id);
 
       if (instance) {
         // update existing object
@@ -673,28 +677,6 @@ function mergeHelper(store, data) {
   }
 
   return merge(data);
-}
-
-/*! *****************************************************************************
-Copyright (c) Microsoft Corporation. All rights reserved.
-Licensed under the Apache License, Version 2.0 (the "License"); you may not use
-this file except in compliance with the License. You may obtain a copy of the
-License at http://www.apache.org/licenses/LICENSE-2.0
-
-THIS CODE IS PROVIDED ON AN *AS IS* BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-KIND, EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION ANY IMPLIED
-WARRANTIES OR CONDITIONS OF TITLE, FITNESS FOR A PARTICULAR PURPOSE,
-MERCHANTABLITY OR NON-INFRINGEMENT.
-
-See the Apache Version 2.0 License for specific language governing permissions
-and limitations under the License.
-***************************************************************************** */
-
-function __decorate(decorators, target, key, desc) {
-    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
-    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
-    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
-    return c > 3 && r && Object.defineProperty(target, key, r), r;
 }
 
 var fastJsonStableStringify = function (data, opts) {
@@ -755,15 +737,10 @@ var fastJsonStableStringify = function (data, opts) {
     })(data);
 };
 
-var isServer = typeof window === "undefined";
-var Query = /*#__PURE__*/function () {
-  function Query(store, query, variables, options) {
-    var _this = this;
-
-    if (options === void 0) {
-      options = {};
-    }
-
+// @ts-ignore
+const isServer = typeof window === "undefined";
+class Query {
+  constructor(store, query, variables, options = {}) {
     this.store = store;
     this.variables = variables;
     this.options = options;
@@ -771,25 +748,30 @@ var Query = /*#__PURE__*/function () {
     this.data = undefined;
     this.error = undefined;
 
-    this.clearData = function () {
-      action(function () {
-        _this.data = undefined;
+    this.clearData = () => {
+      action(() => {
+        this.data = undefined;
       });
     };
 
-    this.refetch = function () {
-      return Promise.resolve().then(action(function () {
-        if (!_this.loading) {
-          _this.fetchResults();
+    this.refetch = () => {
+      return Promise.resolve().then(action(() => {
+        if (!this.loading) {
+          this.fetchResults();
         }
 
-        return _this.promise;
+        return this.promise;
       }));
     };
 
+    makeObservable(this, {
+      loading: observable,
+      data: observable.ref,
+      error: observable
+    });
     this.query = typeof query === "string" ? query : print(query);
     this.queryKey = this.query + fastJsonStableStringify(variables);
-    var fetchPolicy = options.fetchPolicy || "cache-and-network";
+    let fetchPolicy = options.fetchPolicy || "cache-and-network";
 
     if (this.store.ssr && !this.options.noSsr && (isServer || !store.__afterInit)) {
       fetchPolicy = "cache-first";
@@ -802,7 +784,7 @@ var Query = /*#__PURE__*/function () {
       return;
     }
 
-    var inCache = this.store.__queryCache.has(this.queryKey);
+    const inCache = this.store.__queryCache.has(this.queryKey);
 
     switch (this.fetchPolicy) {
       case "no-cache":
@@ -812,7 +794,7 @@ var Query = /*#__PURE__*/function () {
 
       case "cache-only":
         if (!inCache) {
-          this.error = new Error("No results for query " + this.query + " found in cache, and policy is cache-only");
+          this.error = new Error(`No results for query ${this.query} found in cache, and policy is cache-only`);
           this.promise = Promise.reject(this.error);
         } else {
           this.useCachedResults();
@@ -841,15 +823,11 @@ var Query = /*#__PURE__*/function () {
     }
   }
 
-  var _proto = Query.prototype;
-
-  _proto.fetchResults = function fetchResults() {
-    var _this2 = this;
-
+  fetchResults() {
     this.loading = true;
-    var promise;
+    let promise;
 
-    var existingPromise = this.store.__promises.get(this.queryKey);
+    const existingPromise = this.store.__promises.get(this.queryKey);
 
     if (existingPromise) {
       promise = existingPromise;
@@ -859,89 +837,71 @@ var Query = /*#__PURE__*/function () {
       this.store.__pushPromise(promise, this.queryKey);
     }
 
-    promise = promise.then(function (data) {
+    promise = promise.then(data => {
       // cache query and response
-      if (_this2.fetchPolicy !== "no-cache") {
-        _this2.store.__cacheResponse(_this2.queryKey, _this2.store.deflate(data));
+      if (this.fetchPolicy !== "no-cache") {
+        this.store.__cacheResponse(this.queryKey, this.store.deflate(data));
       }
 
-      return _this2.store.merge(data);
+      return this.store.merge(data);
     });
     this.promise = promise;
-    promise.then(action(function (data) {
-      _this2.loading = false;
-      _this2.error = false;
-      _this2.data = data;
-    }), action(function (error) {
-      _this2.loading = false;
-      _this2.error = error;
+    promise.then(action(data => {
+      this.loading = false;
+      this.error = false;
+      this.data = data;
+    }), action(error => {
+      this.loading = false;
+      this.error = error;
     }));
-  };
+  }
 
-  _proto.useCachedResults = function useCachedResults() {
+  useCachedResults() {
     this.data = this.store.merge(this.store.__queryCache.get(this.queryKey));
     this.promise = Promise.resolve(this.data);
-  };
+  }
 
-  _proto["case"] = function _case(handlers) {
+  case(handlers) {
     return this.loading && !this.data ? handlers.loading() : this.error ? handlers.error(this.error) : handlers.data(this.data);
-  };
+  }
 
-  _proto.currentPromise = function currentPromise() {
+  currentPromise() {
     return this.promise;
-  };
+  }
 
-  _proto.then = function then(onfulfilled, onrejected) {
-    var _this3 = this;
-
-    return this.promise.then(function (d) {
-      _this3.store.__runInStoreContext(function () {
-        return onfulfilled(d);
-      });
-    }, function (e) {
-      _this3.store.__runInStoreContext(function () {
-        return onrejected(e);
-      });
+  then(onfulfilled, onrejected) {
+    return this.promise.then(d => {
+      this.store.__runInStoreContext(() => onfulfilled(d));
+    }, e => {
+      this.store.__runInStoreContext(() => onrejected(e));
     });
-  };
+  }
 
-  return Query;
-}();
-
-__decorate([observable], Query.prototype, "loading", void 0);
-
-__decorate([observable.ref], Query.prototype, "data", void 0);
-
-__decorate([observable], Query.prototype, "error", void 0);
+}
 
 function getFirstValue(data) {
-  var keys = Object.keys(data);
-  if (keys.length !== 1) throw new Error("Expected exactly one response key, got: " + keys.join(", "));
+  const keys = Object.keys(data);
+  if (keys.length !== 1) throw new Error(`Expected exactly one response key, got: ${keys.join(", ")}`);
   return data[keys[0]];
 }
 
-var MSTGQLStore = types.model("MSTGQLStore", {
+const MSTGQLStore = types.model("MSTGQLStore", {
   __queryCache: types.optional(types.map(types.frozen()), {})
-})["volatile"](function (self) {
-  var _getEnv = getEnv(self),
-      _getEnv$ssr = _getEnv.ssr,
-      ssr = _getEnv$ssr === void 0 ? false : _getEnv$ssr;
-
+}).volatile(self => {
+  const {
+    ssr = false,
+    gqlHttpClient,
+    gqlWsClient
+  } = getEnv(self);
   return {
-    ssr: ssr,
+    ssr,
+    gqlHttpClient,
+    gqlWsClient,
     __promises: new Map(),
     __afterInit: false
   };
-}).actions(function (self) {
-  Promise.resolve().then(function () {
-    return self.__onAfterInit();
-  });
-
-  var _getEnv2 = getEnv(self),
-      gqlHttpClient = _getEnv2.gqlHttpClient,
-      gqlWsClient = _getEnv2.gqlWsClient;
-
-  if (!gqlHttpClient && !gqlWsClient) throw new Error("Either gqlHttpClient or gqlWsClient (or both) should provided in the MSTGQLStore environment");
+}).actions(self => {
+  Promise.resolve().then(() => self.__onAfterInit());
 
   function merge(data) {
     return mergeHelper(self, data);
@@ -952,38 +912,36 @@ var MSTGQLStore = types.model("MSTGQLStore", {
   }
 
   function rawRequest(query, variables) {
-    if (gqlHttpClient) return gqlHttpClient.request(query, variables);else {
-      return new Promise(function (resolve, reject) {
-        gqlWsClient.request({
-          query: query,
-          variables: variables
+    if (!self.gqlHttpClient && !self.gqlWsClient) throw new Error("Either gqlHttpClient or gqlWsClient (or both) should provided in the MSTGQLStore environment");
+    if (self.gqlHttpClient) return self.gqlHttpClient.request(query, variables);else {
+      return new Promise((resolve, reject) => {
+        self.gqlWsClient.request({
+          query,
+          variables
         }).subscribe({
-          next: function next(data) {
+          next(data) {
             resolve(data.data);
           },
+
           error: reject
         });
       });
     }
   }
 
-  function query(query, variables, options) {
-    if (options === void 0) {
-      options = {};
-    }
-
+  function query(query, variables, options = {}) {
     return new Query(self, query, variables, options);
   }
 
   function mutate(mutation, variables, optimisticUpdate) {
     if (optimisticUpdate) {
-      var recorder = recordPatches(self);
+      const recorder = recordPatches(self);
       optimisticUpdate();
       recorder.stop();
-      var q = query(mutation, variables, {
+      const q = query(mutation, variables, {
         fetchPolicy: "network-only"
       });
-      q.currentPromise()["catch"](function () {
+      q.currentPromise().catch(() => {
         recorder.undo();
       });
       return q;
@@ -995,105 +953,114 @@ var MSTGQLStore = types.model("MSTGQLStore", {
   } // N.b: the T is ignored, but it does simplify code generation
 
 
-  function subscribe(query, variables, onData, onError) {
-    if (onError === void 0) {
-      onError = function onError(error) {
-        throw error;
-      };
-    }
-
-    if (!gqlWsClient) throw new Error("No WS client available");
-    var sub = gqlWsClient.request({
-      query: query,
-      variables: variables
+  function subscribe(query, variables, onData, onError = error => {
+    throw error;
+  }) {
+    if (!self.gqlWsClient) throw new Error("No WS client available");
+    const sub = self.gqlWsClient.request({
+      query,
+      variables
     }).subscribe({
-      next: function next(data) {
+      next(data) {
         if (data.errors) {
           return onError(new Error(JSON.stringify(data.errors)));
         }
 
-        self.__runInStoreContext(function () {
-          var res = self.merge(getFirstValue(data.data));
+        self.__runInStoreContext(() => {
+          const res = self.merge(getFirstValue(data.data));
           if (onData) onData(res);
           return res;
         });
       }
+
     });
-    return function () {
-      return sub.unsubscribe();
-    };
+    return () => sub.unsubscribe();
+  }
+
+  function setHttpClient(value) {
+    self.gqlHttpClient = value;
+  }
+
+  function setWsClient(value) {
+    self.gqlWsClient = value;
   } // exposed actions
 
 
   return {
-    merge: merge,
-    deflate: deflate,
-    mutate: mutate,
-    query: query,
-    subscribe: subscribe,
-    rawRequest: rawRequest,
-    __pushPromise: function __pushPromise(promise, queryKey) {
+    merge,
+    deflate,
+    mutate,
+    query,
+    subscribe,
+    rawRequest,
+    setHttpClient,
+    setWsClient,
+
+    __pushPromise(promise, queryKey) {
       self.__promises.set(queryKey, promise);
 
-      var onSettled = function onSettled() {
-        return self.__promises["delete"](queryKey);
-      };
+      const onSettled = () => self.__promises.delete(queryKey);
 
       promise.then(onSettled, onSettled);
     },
-    __runInStoreContext: function __runInStoreContext(fn) {
+
+    __runInStoreContext(fn) {
       return fn();
     },
-    __cacheResponse: function __cacheResponse(key, response) {
+
+    __cacheResponse(key, response) {
       self.__queryCache.set(key, response);
     },
-    __onAfterInit: function __onAfterInit() {
+
+    __onAfterInit() {
       self.__afterInit = true;
     }
+
   };
 });
 function configureStoreMixin(knownTypes, rootTypes, namingConvention) {
-  var kt = new Map();
-  var rt = new Set(rootTypes);
-  return function () {
-    return {
-      actions: {
-        afterCreate: function afterCreate() {
-          // initialized lazily, so that there are no circular dep issues
-          knownTypes.forEach(function (_ref) {
-            var key = _ref[0],
-                typeFn = _ref[1];
-            var type = typeFn();
-            if (!type) throw new Error("The type provided for '" + key + "' is empty. Probably this is a module loading issue");
-            kt.set(key, type);
-          });
-        }
-      },
-      views: {
-        isKnownType: function isKnownType(typename) {
-          return kt.has(typename);
-        },
-        isRootType: function isRootType(typename) {
-          return rt.has(typename);
-        },
-        getTypeDef: function getTypeDef(typename) {
-          return kt.get(typename);
-        },
-        getCollectionName: function getCollectionName(typename) {
-          if (namingConvention == "js") {
-            // Pluralize only last word (pluralize may fail with words that are
-            // not valid English words as is the case with LongCamelCaseTypeNames)
-            var newName = camelcase(typename);
-            var parts = newName.split(/(?=[A-Z])/);
-            parts[parts.length - 1] = pluralize(parts[parts.length - 1]);
-            return parts.join("");
-          }
-
-          return typename.toLowerCase() + "s";
-        }
+  const kt = new Map();
+  const rt = new Set(rootTypes);
+  return () => ({
+    actions: {
+      afterCreate() {
+        // initialized lazily, so that there are no circular dep issues
+        knownTypes.forEach(([key, typeFn]) => {
+          const type = typeFn();
+          if (!type) throw new Error(`The type provided for '${key}' is empty. Probably this is a module loading issue`);
+          kt.set(key, type);
+        });
       }
-    };
-  };
+
+    },
+    views: {
+      isKnownType(typename) {
+        return kt.has(typename);
+      },
+
+      isRootType(typename) {
+        return rt.has(typename);
+      },
+
+      getTypeDef(typename) {
+        return kt.get(typename);
+      },
+
+      getCollectionName(typename) {
+        if (namingConvention == "js") {
+          // Pluralize only last word (pluralize may fail with words that are
+          // not valid English words as is the case with LongCamelCaseTypeNames)
+          const newName = camelcase(typename);
+          const parts = newName.split(/(?=[A-Z])/);
+          parts[parts.length - 1] = pluralize(parts[parts.length - 1]);
+          return parts.join("");
+        }
+
+        return typename.toLowerCase() + "s";
+      }
+
+    }
+  });
 }
 
 /*
@@ -1101,24 +1068,35 @@ function configureStoreMixin(knownTypes, rootTypes, namingConvention) {
  we cannot use the default resolution mechanism, since they are not part of the store. So, first fetch the store and resolve from there
 */
 
-function MSTGQLRef(targetType) {
+const MSTGQL_ID_DELIM = "::";
+function getMSTGQLRefLabelAndId(labeledId) {
+  const [label, ...id] = labeledId.split(MSTGQL_ID_DELIM);
+  return {
+    label,
+    id: id.join("")
+  };
+}
+function MSTGQLRef(targetType, label = targetType.name) {
   return types.reference(targetType, {
-    get: function get(id, parent) {
-      var node = resolveIdentifier(targetType, parent.store || getParent(parent).store, id);
+    get(labeledId, parent) {
+      const id = getMSTGQLRefLabelAndId(labeledId).id;
+      const node = resolveIdentifier(targetType, parent.store || getParent(parent).store, id);
 
       if (!node) {
-        throw new Error("Failed to resolve reference " + id + " to " + targetType.name);
+        throw new Error(`Failed to resolve reference ${id} to ${targetType.name}`);
       }
 
       return node;
     },
-    set: function set(value) {
-      return value.id;
+
+    set(value) {
+      return [label, MSTGQL_ID_DELIM, value.id].join("");
     }
+
   });
 }
-var MSTGQLObject = types.model("MSTGQLObject").extend(function (self) {
-  var store;
+const MSTGQLObject = types.model("MSTGQLObject").extend(self => {
+  let store;
 
   function getStore() {
     return store || (store = getParent(self, 2));
@@ -1126,31 +1104,30 @@ var MSTGQLObject = types.model("MSTGQLObject").extend(function (self) {
 
   return {
     actions: {
-      __setStore: function __setStore(s) {
+      __setStore(s) {
         store = s;
       }
+
     },
     views: {
-      __getStore: function __getStore() {
+      __getStore() {
         return getStore();
       },
-      hasLoaded: function hasLoaded(key) {
+
+      hasLoaded(key) {
         return typeof self[key] !== "undefined";
       }
+
     }
   };
 });
 
-function createHttpClient(url, options) {
-  if (options === void 0) {
-    options = {};
-  }
-
+function createHttpClient(url, options = {}) {
   return new GraphQLClient(url, options);
 }
 
-var QueryBuilder = /*#__PURE__*/function () {
-  function QueryBuilder() {
+class QueryBuilder {
+  constructor() {
     this.__query = "";
 
     this.__attr("__typename");
@@ -1158,58 +1135,55 @@ var QueryBuilder = /*#__PURE__*/function () {
     if (typeof this.id === "function") this.id();
   }
 
-  var _proto = QueryBuilder.prototype;
-
-  _proto.__attr = function __attr(attr) {
+  __attr(attr) {
     return this._(attr);
   } // raw is exposed, to be able to add free form gql in the middle
-  ;
 
-  _proto._ = function _(str) {
-    this.__query += str + "\n"; // TODO: restore depth / formatting by passing base depth to constructor: ${"".padStart(this.__qb.stack.length * 2)}
+
+  _(str) {
+    this.__query += `${str}\n`; // TODO: restore depth / formatting by passing base depth to constructor: ${"".padStart(this.__qb.stack.length * 2)}
 
     return this;
-  };
+  }
 
-  _proto.__child = function __child(childName, childType, builder) {
-    this._(childName + " {\n");
+  __child(childName, childType, builder) {
+    this._(`${childName} {\n`);
 
     this.__buildChild(childType, builder);
 
-    this._("}");
+    this._(`}`);
 
     return this;
   } // used for interfaces and unions
-  ;
 
-  _proto.__inlineFragment = function __inlineFragment(childName, childType, builder) {
-    this._("... on " + childName + " {\n");
+
+  __inlineFragment(childName, childType, builder) {
+    this._(`... on ${childName} {\n`);
 
     this.__buildChild(childType, builder);
 
-    this._("}");
+    this._(`}`);
 
     return this;
-  };
+  }
 
-  _proto.__buildChild = function __buildChild(childType, builder) {
+  __buildChild(childType, builder) {
     // already instantiated child builder
     if (builder instanceof QueryBuilder) {
       this._(builder.toString());
     } else {
-      var childBuilder = new childType();
+      const childBuilder = new childType();
       if (typeof builder === "string") childBuilder._(builder);else if (typeof builder === "function") builder(childBuilder); // undefined is ok as well, no fields at all
 
       this._(childBuilder.toString());
     }
-  };
+  }
 
-  _proto.toString = function toString() {
+  toString() {
     return this.__query;
-  };
+  }
 
-  return QueryBuilder;
-}();
+}
 
 var index_umd = createCommonjsModule(function (module, exports) {
 (function (global, factory) {
@@ -3166,47 +3140,41 @@ var pick = _flatRest(function(object, paths) {
 
 var pick_1 = pick;
 
-function localStorageMixin(options) {
-  if (options === void 0) {
-    options = {};
-  }
+function localStorageMixin(options = {}) {
+  const storage = options.storage || window.localStorage;
+  const throttleInterval = options.throttle || 5000;
+  const storageKey = options.storageKey || "mst-gql-rootstore";
+  return self => ({
+    actions: {
+      afterCreate: function () {
+        try {
+          return Promise.resolve(storage.getItem(storageKey)).then(function (data) {
+            if (data) {
+              const json = JSON.parse(data);
+              const selfType = getType(self);
 
-  var storage = options.storage || window.localStorage;
-  var throttleInterval = options.throttle || 5000;
-  var storageKey = options.storageKey || "mst-gql-rootstore";
-  return function (self) {
-    return {
-      actions: {
-        afterCreate: function afterCreate() {
-          try {
-            return Promise.resolve(storage.getItem(storageKey)).then(function (data) {
-              if (data) {
-                var json = JSON.parse(data);
-                var selfType = getType(self);
-
-                if (!selfType.is(json)) {
-                  console.warn("Data in local storage does not conform the data shape specified by " + selfType.name + ", ignoring the stored data");
-                  return;
-                }
-
-                applySnapshot(self, json);
+              if (!selfType.is(json)) {
+                console.warn(`Data in local storage does not conform the data shape specified by ${selfType.name}, ignoring the stored data`);
+                return;
               }
 
-              addDisposer(self, onSnapshot(self, index_umd.throttle(throttleInterval, function (data) {
-                if (options.filter) {
-                  data = pick_1(data, options.filter);
-                }
+              applySnapshot(self, json);
+            }
 
-                storage.setItem(storageKey, JSON.stringify(data));
-              })));
-            });
-          } catch (e) {
-            return Promise.reject(e);
-          }
+            addDisposer(self, onSnapshot(self, index_umd.throttle(throttleInterval, data => {
+              if (options.filter) {
+                data = pick_1(data, options.filter);
+              }
+
+              storage.setItem(storageKey, JSON.stringify(data));
+            })));
+          });
+        } catch (e) {
+          return Promise.reject(e);
         }
       }
-    };
-  };
+    }
+  });
 }
 
 function _settle(pact, state, value) {
@@ -3231,7 +3199,7 @@ function _settle(pact, state, value) {
 
     pact.s = state;
     pact.v = value;
-    var observer = pact.o;
+    const observer = pact.o;
 
     if (observer) {
       observer(pact);
@@ -3239,15 +3207,15 @@ function _settle(pact, state, value) {
   }
 }
 
-var _Pact = /*#__PURE__*/function () {
+const _Pact = /*#__PURE__*/function () {
   function _Pact() {}
 
   _Pact.prototype.then = function (onFulfilled, onRejected) {
-    var result = new _Pact();
-    var state = this.s;
+    const result = new _Pact();
+    const state = this.s;
 
     if (state) {
-      var callback = state & 1 ? onFulfilled : onRejected;
+      const callback = state & 1 ? onFulfilled : onRejected;
 
       if (callback) {
         try {
@@ -3264,7 +3232,7 @@ var _Pact = /*#__PURE__*/function () {
 
     this.o = function (_this) {
       try {
-        var value = _this.v;
+        const value = _this.v;
 
         if (_this.s & 1) {
           _settle(result, 1, onFulfilled ? onFulfilled(value) : value);
@@ -3398,18 +3366,18 @@ function _for(test, update, body) {
   }
 }
 
-var getDataFromTree = function getDataFromTree(tree, client, renderFunction) {
+const getDataFromTree = function (tree, client, renderFunction) {
   try {
-    var _exit2;
+    let _exit;
 
     if (renderFunction === undefined) renderFunction = require("react-dom/server").renderToStaticMarkup;
     return Promise.resolve(_for(function () {
-      return !_exit2;
+      return !_exit;
     }, void 0, function () {
-      var html = renderFunction(tree);
+      const html = renderFunction(tree);
 
       if (client.__promises.size === 0) {
-        _exit2 = 1;
+        _exit = 1;
         return html;
       }
 
@@ -3423,10 +3391,10 @@ function createStoreContext(React) {
   return React.createContext(null);
 }
 
-function normalizeQuery(store, query, _ref) {
-  var variables = _ref.variables,
-      _ref$fetchPolicy = _ref.fetchPolicy,
-      fetchPolicy = _ref$fetchPolicy === void 0 ? "cache-and-network" : _ref$fetchPolicy;
+function normalizeQuery(store, query, {
+  variables,
+  fetchPolicy = "cache-and-network"
+}) {
   if (typeof query === "function") return query(store);
   if (query instanceof Query) return query;
   return store.query(query, variables, {
@@ -3435,43 +3403,32 @@ function normalizeQuery(store, query, _ref) {
 }
 
 function createUseQueryHook(context, React) {
-  return function (queryIn, opts) {
-    if (queryIn === void 0) {
-      queryIn = undefined;
-    }
+  return function (queryIn = undefined, opts = {}) {
+    const store = opts && opts.store || React.useContext(context); // const prevData = useRef<DATA>() // TODO: is this useful?
 
-    if (opts === void 0) {
-      opts = {};
-    }
-
-    var store = opts && opts.store || React.useContext(context); // const prevData = useRef<DATA>() // TODO: is this useful?
-
-    var _React$useState = React.useState(function () {
+    const [query, setQuery] = React.useState(() => {
       if (!queryIn) return undefined;
       return normalizeQuery(store, queryIn, opts);
-    }),
-        query = _React$useState[0],
-        setQuery = _React$useState[1];
-
-    var setQueryHelper = React.useCallback(function (newQuery) {
+    });
+    const setQueryHelper = React.useCallback(newQuery => {
       // if the current query had results already, save it in prevData
       // if (query && query.data) prevData.current = query.data
       setQuery(normalizeQuery(store, newQuery, opts));
     }, []); // if new query or variables are passed in, replace the query!
 
-    React.useEffect(function () {
+    React.useEffect(() => {
       if (!queryIn || typeof queryIn === "function") return; // ignore changes to initializer func
 
       setQueryHelper(queryIn);
     }, [queryIn, opts.fetchPolicy, JSON.stringify(opts.variables)]); // TODO: use a decent deep equal
 
     return {
-      store: store,
+      store,
       loading: query ? query.loading : false,
       error: query && query.error,
       data: query && query.data,
       // prevData: prevData.current,
-      query: query,
+      query,
       setQuery: setQueryHelper
     };
   };
@@ -3483,5 +3440,5 @@ function withTypedRefs() {
   };
 }
 
-export { MSTGQLObject, MSTGQLRef, MSTGQLStore, Query, QueryBuilder, configureStoreMixin, createHttpClient, createStoreContext, createUseQueryHook, getDataFromTree, localStorageMixin, withTypedRefs };
+export { MSTGQLObject, MSTGQLRef, MSTGQLStore, Query, QueryBuilder, configureStoreMixin, createHttpClient, createStoreContext, createUseQueryHook, getDataFromTree, getMSTGQLRefLabelAndId, localStorageMixin, withTypedRefs };
 //# sourceMappingURL=mst-gql.module.js.map

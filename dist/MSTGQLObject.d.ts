@@ -1,6 +1,10 @@
 import { IAnyModelType, IReferenceType } from "mobx-state-tree";
 import { StoreType } from "./MSTGQLStore";
-export declare function MSTGQLRef<T extends IAnyModelType>(targetType: T): IReferenceType<T>;
+export declare function getMSTGQLRefLabelAndId(labeledId: string): {
+    label: string;
+    id: string;
+};
+export declare function MSTGQLRef<T extends IAnyModelType>(targetType: T, label?: string): IReferenceType<T>;
 export declare const MSTGQLObject: import("mobx-state-tree").IModelType<{}, {
     __setStore(s: StoreType): void;
 } & {

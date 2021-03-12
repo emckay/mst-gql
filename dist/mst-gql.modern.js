@@ -1,6 +1,6 @@
 import { resolveIdentifier, types, getEnv, recordPatches, getParent, getType, applySnapshot, addDisposer, onSnapshot } from 'mobx-state-tree';
 import { print } from 'graphql';
-import { action, observable } from 'mobx';
+import { action, makeObservable, observable } from 'mobx';
 import { GraphQLClient } from 'graphql-request';
 
 const preserveCamelCase = string => {
@@ -679,28 +679,6 @@ function mergeHelper(store, data) {
   return merge(data);
 }
 
-/*! *****************************************************************************
-Copyright (c) Microsoft Corporation. All rights reserved.
-Licensed under the Apache License, Version 2.0 (the "License"); you may not use
-this file except in compliance with the License. You may obtain a copy of the
-License at http://www.apache.org/licenses/LICENSE-2.0
-
-THIS CODE IS PROVIDED ON AN *AS IS* BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-KIND, EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION ANY IMPLIED
-WARRANTIES OR CONDITIONS OF TITLE, FITNESS FOR A PARTICULAR PURPOSE,
-MERCHANTABLITY OR NON-INFRINGEMENT.
-
-See the Apache Version 2.0 License for specific language governing permissions
-and limitations under the License.
-***************************************************************************** */
-
-function __decorate(decorators, target, key, desc) {
-    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
-    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
-    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
-    return c > 3 && r && Object.defineProperty(target, key, r), r;
-}
-
 var fastJsonStableStringify = function (data, opts) {
     if (!opts) opts = {};
     if (typeof opts === 'function') opts = { cmp: opts };
@@ -759,6 +737,7 @@ var fastJsonStableStringify = function (data, opts) {
     })(data);
 };
 
+// @ts-ignore
 const isServer = typeof window === "undefined";
 class Query {
   constructor(store, query, variables, options = {}) {
@@ -785,6 +764,11 @@ class Query {
       }));
     };
 
+    makeObservable(this, {
+      loading: observable,
+      data: observable.ref,
+      error: observable
+    });
     this.query = typeof query === "string" ? query : print(query);
     this.queryKey = this.query + fastJsonStableStringify(variables);
     let fetchPolicy = options.fetchPolicy || "cache-and-network";
@@ -895,12 +879,6 @@ class Query {
 
 }
 
-__decorate([observable], Query.prototype, "loading", void 0);
-
-__decorate([observable.ref], Query.prototype, "data", void 0);
-
-__decorate([observable], Query.prototype, "error", void 0);
-
 function getFirstValue(data) {
   const keys = Object.keys(data);
   if (keys.length !== 1) throw new Error(`Expected exactly one response key, got: ${keys.join(", ")}`);
@@ -911,22 +889,19 @@ const MSTGQLStore = types.model("MSTGQLStore", {
   __queryCache: types.optional(types.map(types.frozen()), {})
 }).volatile(self => {
   const {
-    ssr = false
+    ssr = false,
+    gqlHttpClient,
+    gqlWsClient
   } = getEnv(self);
   return {
     ssr,
+    gqlHttpClient,
+    gqlWsClient,
     __promises: new Map(),
     __afterInit: false
   };
 }).actions(self => {
   Promise.resolve().then(() => self.__onAfterInit());
-  const {
-    gqlHttpClient,
-    // TODO: rename to requestHandler
-    gqlWsClient // TODO: rename to streamHandler
-
-  } = getEnv(self);
-  if (!gqlHttpClient && !gqlWsClient) throw new Error("Either gqlHttpClient or gqlWsClient (or both) should provided in the MSTGQLStore environment");
 
   function merge(data) {
     return mergeHelper(self, data);
@@ -937,9 +912,10 @@ const MSTGQLStore = types.model("MSTGQLStore", {
   }
 
   function rawRequest(query, variables) {
-    if (gqlHttpClient) return gqlHttpClient.request(query, variables);else {
+    if (!self.gqlHttpClient && !self.gqlWsClient) throw new Error("Either gqlHttpClient or gqlWsClient (or both) should provided in the MSTGQLStore environment");
+    if (self.gqlHttpClient) return self.gqlHttpClient.request(query, variables);else {
       return new Promise((resolve, reject) => {
-        gqlWsClient.request({
+        self.gqlWsClient.request({
           query,
           variables
         }).subscribe({
@@ -980,8 +956,8 @@ const MSTGQLStore = types.model("MSTGQLStore", {
   function subscribe(query, variables, onData, onError = error => {
     throw error;
   }) {
-    if (!gqlWsClient) throw new Error("No WS client available");
-    const sub = gqlWsClient.request({
+    if (!self.gqlWsClient) throw new Error("No WS client available");
+    const sub = self.gqlWsClient.request({
       query,
       variables
     }).subscribe({
@@ -999,6 +975,14 @@ const MSTGQLStore = types.model("MSTGQLStore", {
 
     });
     return () => sub.unsubscribe();
+  }
+
+  function setHttpClient(value) {
+    self.gqlHttpClient = value;
+  }
+
+  function setWsClient(value) {
+    self.gqlWsClient = value;
   } // exposed actions
 
 
@@ -1009,6 +993,8 @@ const MSTGQLStore = types.model("MSTGQLStore", {
     query,
     subscribe,
     rawRequest,
+    setHttpClient,
+    setWsClient,
 
     __pushPromise(promise, queryKey) {
       self.__promises.set(queryKey, promise);
@@ -1082,9 +1068,18 @@ function configureStoreMixin(knownTypes, rootTypes, namingConvention) {
  we cannot use the default resolution mechanism, since they are not part of the store. So, first fetch the store and resolve from there
 */
 
-function MSTGQLRef(targetType) {
+const MSTGQL_ID_DELIM = "::";
+function getMSTGQLRefLabelAndId(labeledId) {
+  const [label, ...id] = labeledId.split(MSTGQL_ID_DELIM);
+  return {
+    label,
+    id: id.join("")
+  };
+}
+function MSTGQLRef(targetType, label = targetType.name) {
   return types.reference(targetType, {
-    get(id, parent) {
+    get(labeledId, parent) {
+      const id = getMSTGQLRefLabelAndId(labeledId).id;
       const node = resolveIdentifier(targetType, parent.store || getParent(parent).store, id);
 
       if (!node) {
@@ -1095,7 +1090,7 @@ function MSTGQLRef(targetType) {
     },
 
     set(value) {
-      return value.id;
+      return [label, MSTGQL_ID_DELIM, value.id].join("");
     }
 
   });
@@ -3243,5 +3238,5 @@ function withTypedRefs() {
   };
 }
 
-export { MSTGQLObject, MSTGQLRef, MSTGQLStore, Query, QueryBuilder, configureStoreMixin, createHttpClient, createStoreContext, createUseQueryHook, getDataFromTree, localStorageMixin, withTypedRefs };
+export { MSTGQLObject, MSTGQLRef, MSTGQLStore, Query, QueryBuilder, configureStoreMixin, createHttpClient, createStoreContext, createUseQueryHook, getDataFromTree, getMSTGQLRefLabelAndId, localStorageMixin, withTypedRefs };
 //# sourceMappingURL=mst-gql.modern.js.map
